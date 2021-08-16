@@ -23,9 +23,9 @@ struct Colony
 	uint8_t id;
 	sf::Color ants_color = sf::Color::White;
 	uint64_t ant_creation_id = 0;
+    
 
-
-	Colony(float x, float y, uint32_t n, uint8_t col_id)
+	Colony(float x, float y, uint32_t n, uint8_t col_id, sim::Context& context)
 		: base(sf::Vector2f(x, y), 20.0f)
 		, max_ants_count(n)
 		, ants_creation_cooldown(0.125f)
@@ -38,14 +38,14 @@ struct Colony
 		base.food = 0.0f;
 		uint32_t ants_count = 16;
 		for (uint32_t i(ants_count); i--;) {
-			createWorker();
+			createWorker(context);
 		}
 	}
 
-	Ant& createWorker()
+	Ant& createWorker(sim::Context& context)
 	{
 		++ant_creation_id;
-		const uint64_t ant_id = ants.emplace_back(base.position.x, base.position.y, RNGf::getUnder(2.0f * PI), id);
+		const uint64_t ant_id = ants.emplace_back(base.position, context.rng.getUnder(2.0f * PI), id, context.rng);
 		Ant& ant = ants[ant_id];
 		ant.id = to<uint16_t>(ant_id);
 		ant.type = Ant::Type::Worker;
@@ -63,10 +63,10 @@ struct Colony
 		ant.max_autonomy *= soldier_scale;
 	}
 
-	void genericAntsUpdate(float dt, World& world)
+	void genericAntsUpdate(World& world, sim::Context& context)
 	{
 		for (Ant& ant : ants) {
-			AntUpdater::initialUpdate(ant, world, dt);
+			AntUpdater::initialUpdate(ant, world, context);
 		}
 	}
 
@@ -81,58 +81,61 @@ struct Colony
 		return ants.size() < max_ants_count;
 	}
 
-	void createNewAnts(float dt)
+	void createNewAnts(sim::Context& context)
 	{
 		const float ant_cost = 4.0f;
-		if (ants_creation_cooldown.updateAutoReset(dt) && isNotFull()) {
+		if (ants_creation_cooldown.updateAutoReset(context.dt) && isNotFull()) {
 			if (mustCreateSoldier()) {
 				if (base.useFood(3.0f * ant_cost)) {
-					specializeSoldier(createWorker());
+					specializeSoldier(createWorker(context));
 				}
 			}
 			else if (base.useFood(ant_cost)) {
-				createWorker();
+				createWorker(context);
 			}
 		}
 	}
 
-	void update(float dt, World& world)
+	void update(World& world, sim::Context& context)
 	{
 		// Update stats
-		if (pop_diff_update.updateAutoReset(dt)) {
+		if (pop_diff_update.updateAutoReset(context.dt)) {
  			pop_diff.addValue(ants.size());
 		}
-		createNewAnts(dt);
+		createNewAnts(context);
 		// Update ants and check if collision with colony
 		for (Ant& ant : ants) {
-			AntUpdater::update(ant, world, dt);
+			AntUpdater::update(ant, world, context);
 			ant.checkColony(base);
 		}
 	}
 
 	void removeDeadAnts()
 	{
-		std::list<int16_t> to_remove;
-		for (Ant& a : ants) {
-			if (a.isDead()) {
-				to_remove.push_back(a.id);
-			}
-		}
-		for (uint64_t ant_id : to_remove) {
-			ants.erase(ant_id);
-		}
+		
 	}
     
-    uint32_t killWeakAnts(World& world)
+    void killWeakAnts(World& world)
     {
-        uint32_t count = 0;
+        // Mark weak ants as dead
+        uint32_t dead_count = 0;
         for (Ant& a : ants) {
             if (a.isDone()) {
                 a.kill(world);
-                ++count;
+                ++dead_count;
             }
         }
-        return count;
+        // Clean the memory
+        std::vector<int16_t> to_remove;
+        to_remove.reserve(dead_count);
+        for (Ant& a : ants) {
+            if (a.isDead()) {
+                to_remove.push_back(a.id);
+            }
+        }
+        for (uint64_t ant_id : to_remove) {
+            ants.erase(ant_id);
+        }
     }
 
 	uint32_t soldiersCount() const
