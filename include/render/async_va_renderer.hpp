@@ -7,15 +7,14 @@
 
 struct AsyncRenderer
 {
-	DoubleObject<sf::VertexArray>& vertex_array;
+	DoubleObject<sf::VertexArray> vertex_array;
 	std::thread thread;
 	std::mutex mutex;
 	bool run;
 	bool swap_ok;
 
-	AsyncRenderer(DoubleObject<sf::VertexArray>& target)
-		: vertex_array(target)
-		, run(true)
+	AsyncRenderer()
+		: run(true)
 		, swap_ok(true)
 	{}
 

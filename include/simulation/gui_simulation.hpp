@@ -6,7 +6,7 @@
 #include "common/event_manager.hpp"
 #include "event_state.hpp"
 #include "render/renderer.hpp"
-#include "simulation/offscreen_simulation.hpp"
+#include "simulation/simulation.hpp"
 
 
 namespace sim
@@ -21,7 +21,7 @@ struct GUISimulation
 	EventSate ev_state;
 
     GUISimulation(sf::Window& window)
-		: renderer()
+		: renderer(simulation.world.map)
 		, ev_manager(window, true)
 	{
 		initEventCallbacks();
@@ -31,12 +31,12 @@ struct GUISimulation
 	{
 		ev_manager.addMousePressedCallback(sf::Mouse::Right, [&](sfev::CstEv) {
 			selectColony();
-			simulation.world.renderer.draw_to_enemies = false;
+			renderer.world_renderer.draw_to_enemies = false;
 		});
 
 		ev_manager.addMousePressedCallback(sf::Mouse::Middle, [&](sfev::CstEv) {
 			selectColony();
-			simulation.world.renderer.draw_to_enemies = true;
+            renderer.world_renderer.draw_to_enemies = true;
 		});
 
 		ev_manager.addEventCallback(sf::Event::Closed, [this](sfev::CstEv) {
@@ -90,11 +90,11 @@ struct GUISimulation
 			const sf::Vector2f world_mouse_pos = renderer.vp_handler.getMouseWorldPosition();
 			const float length = getLength(world_mouse_pos - c.base.position);
 			if (length < c.base.radius) {
-				simulation.world.renderer.selected_colony = c.id;
+                renderer.world_renderer.selected_colony = c.id;
 				return;
 			}
 		}
-		simulation.world.renderer.selected_colony = -1;
+        renderer.world_renderer.selected_colony = -1;
 	}
 
 	void processEvents()

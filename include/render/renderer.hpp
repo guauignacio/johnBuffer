@@ -12,13 +12,12 @@ struct Renderer
 	bool render_ants = true;
 	ViewportHandler vp_handler;
 	std::vector<ColonyRenderer> colonies;
-    WorldRenderer renderer;
+    WorldRenderer world_renderer;
     
 	
     Renderer(const Grid<WorldCell>& world_grid)
 		: vp_handler({ to<float>(Conf::WIN_WIDTH), to<float>(Conf::WIN_HEIGHT) })
-        , renderer(world_grid)
-
+        , world_renderer(world_grid)
 	{
 		colonies.reserve(8);
 	}
@@ -48,7 +47,7 @@ struct Renderer
 		ground.setFillColor(sf::Color::Black);
 		target.draw(ground, rs);
 		// Draw world
-		world.render(target, rs);
+		world_renderer.render(target, rs);
 		// Draw ants and colonies
 		for (ColonyRenderer& colony : colonies) {
 			if (render_ants) {
